@@ -34,6 +34,10 @@ class SocketFlash extends Socket2 {
         this.impl.connect();
     }
 
+    override public function close() {
+        impl.close();
+    }
+
     override public function send(data:Bytes) {
         impl.writeBytes(data.getData());
         impl.flush();

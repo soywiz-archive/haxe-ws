@@ -12,6 +12,9 @@ class Socket2 {
         this.port = port;
     }
 
+    public function close() {
+    }
+
     public function process() {
     }
 

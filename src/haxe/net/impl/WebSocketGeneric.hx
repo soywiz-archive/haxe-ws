@@ -34,10 +34,11 @@ class WebSocketGeneric extends WebSocket {
 
         socket = Socket2.create();
         state = State.Handshake;
+        socketData = new BytesRW();
         socket.onconnect = function() {
             _debug('socket connected');
             writeBytes(prepareClientHandshake(path, host, port, key, origin));
-            this.onopen();
+            //this.onopen();
         };
         socket.onclose = function() {
             _debug('socket closed');
@@ -48,8 +49,11 @@ class WebSocketGeneric extends WebSocket {
             this.onerror('error');
         };
         socket.ondata = function(data:Bytes) {
+            socketData.writeBytes(data);
             handleData();
         };
+
+
     }
 
     override public function process() {
@@ -70,6 +74,7 @@ class WebSocketGeneric extends WebSocket {
         }
     }
 
+    private var socketData:BytesRW;
     private var isFinal:Bool;
     private var isMasked:Bool;
     private var opcode:Opcode;
@@ -79,19 +84,17 @@ class WebSocketGeneric extends WebSocket {
     private var mask:Int;
     private var httpHeader:String = "";
     private var lastPong:Date = null;
-    private var payload:Bytes = null;
+    private var payload:BytesRW = null;
 
     private function handleData() {
         while (true) {
-            if (payload == null) {
-                payload = new ByteArray();
-                payload.endian = Endian.BIG_ENDIAN;
-            }
+            if (payload == null) payload = new BytesRW();
+
             switch (state) {
                 case State.Handshake:
                     var found = false;
-                    while (socket.bytesAvailable > 0) {
-                        httpHeader += String.fromCharCode(socket.readByte());
+                    while (socketData.available > 0) {
+                        httpHeader += String.fromCharCode(socketData.readByte());
                         //trace(httpHeader.substr( -4));
                         if (httpHeader.substr(-4) == "\r\n\r\n") {
                             found = true;
@@ -100,13 +103,13 @@ class WebSocketGeneric extends WebSocket {
                     }
                     if (!found) return;
 
-                    onOpen.dispatch();
+                    this.onopen();
 
                     state = State.Head;
                 case State.Head:
-                    if (socket.bytesAvailable < 2) return;
-                    var b0 = socket.readByte();
-                    var b1 = socket.readByte();
+                    if (socketData.available < 2) return;
+                    var b0 = socketData.readByte();
+                    var b1 = socketData.readByte();
 
                     isFinal = ((b0 >> 7) & 1) != 0;
                     opcode = cast(((b0 >> 0) & 0xF), Opcode);
@@ -117,33 +120,33 @@ class WebSocketGeneric extends WebSocket {
                     state = State.HeadExtraLength;
                 case State.HeadExtraLength:
                     if (partialLength == 126) {
-                        if (socket.bytesAvailable < 2) return;
-                        length = socket.readUnsignedShort();
+                        if (socketData.available < 2) return;
+                        length = socketData.readUnsignedShort();
                     } else if (partialLength == 127) {
-                        if (socket.bytesAvailable < 4) return;
-                        length = socket.readUnsignedInt();
+                        if (socketData.available < 4) return;
+                        length = socketData.readUnsignedInt();
                     } else {
                         length = partialLength;
                     }
                     state = State.HeadExtraMask;
                 case State.HeadExtraMask:
                     if (isMasked) {
-                        if (socket.bytesAvailable < 4) return;
-                        mask = socket.readUnsignedInt();
+                        if (socketData.available < 4) return;
+                        mask = socketData.readUnsignedInt();
                     }
                     state = State.Body;
                 case State.Body:
-                    if (socket.bytesAvailable < length) return;
-                    socket.readBytes(payload);
+                    if (socketData.available < length) return;
+                    payload.writeBytes(socketData.readBytes(length));
 
                     switch (opcode) {
                         case Opcode.Binary | Opcode.Text | Opcode.Continuation:
                             _debug("Received message, " + "Type: " + opcode);
                             if (isFinal) {
                                 if (frameIsBinary) {
-                                    this.onmessageBytes(payload);
+                                    this.onmessageBytes(payload.readAllAvailableBytes());
                                 } else {
-                                    this.onmessageString(payload.toString());
+                                    this.onmessageString(payload.readAllAvailableBytes().toString());
                                 }
                                 payload = null;
                             }
@@ -208,9 +211,8 @@ class WebSocketGeneric extends WebSocket {
         writeBytes(prepareFrame(data, type, true));
     }
 
-    private function prepareFrame(data:Bytes, type:Opcode, isFinal:Bool) {
-        var out:ByteArray = new ByteArray();
-        out.endian = Endian.BIG_ENDIAN;
+    private function prepareFrame(data:Bytes, type:Opcode, isFinal:Bool):Bytes {
+        var out = new BytesRW();
         var isMasked = false;
         var sizeMask = (isMasked ? 0x80 : 0x00);
 
@@ -227,7 +229,7 @@ class WebSocketGeneric extends WebSocket {
         }
 
         out.writeBytes(data);
-        return out;
+        return out.readAllAvailableBytes();
     }
 }
 
@@ -265,5 +267,74 @@ enum State {
 
     @:to public function toInt() {
         return this;
+    }
+}
+
+class BytesRW {
+    public var available(default, null):Int = 0;
+    private var currentOffset:Int = 0;
+    private var currentData: Bytes = null;
+    private var chunks:Array<Bytes> = [];
+
+    public function writeByte(v:Int) {
+        var b = Bytes.alloc(1);
+        b.set(0, v);
+        writeBytes(b);
+    }
+
+    public function writeShort(v:Int) {
+        var b = Bytes.alloc(2);
+        b.set(0, (v >> 8) & 0xFF);
+        b.set(1, (v >> 0) & 0xFF);
+        writeBytes(b);
+    }
+
+    public function writeInt(v:Int) {
+        var b = Bytes.alloc(4);
+        b.set(0, (v >> 24) & 0xFF);
+        b.set(1, (v >> 16) & 0xFF);
+        b.set(2, (v >> 8) & 0xFF);
+        b.set(3, (v >> 0) & 0xFF);
+        writeBytes(b);
+    }
+
+    public function writeBytes(data:Bytes) {
+        chunks.push(data);
+        available += data.length;
+    }
+
+    public function readAllAvailableBytes():Bytes {
+        return readBytes(available);
+    }
+
+    public function readBytes(count:Int):Bytes {
+        var count2 = Std.int(Math.min(count, available));
+        var out = Bytes.alloc(count2);
+        for (n in 0 ... count2) out.set(n, readByte());
+        return out;
+    }
+
+    public function readUnsignedShort():UInt {
+        var h = readByte();
+        var l = readByte();
+        return (h << 8) | (l << 0);
+    }
+
+    public function readUnsignedInt():UInt {
+        var v3 = readByte();
+        var v2 = readByte();
+        var v1 = readByte();
+        var v0 = readByte();
+        return (v3 << 24) | (v2 << 16) | (v1 << 8) | (v0 << 0);
+    }
+
+    public function readByte():Int {
+        if (available <= 0) throw 'Not bytes available';
+        while (currentData == null || currentOffset >= currentData.length) {
+            currentOffset = 0;
+            currentData = chunks.shift();
+        }
+        available--;
+        return currentData.get(currentOffset++);
     }
 }

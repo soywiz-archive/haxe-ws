@@ -1,0 +1,14 @@
+{
+  "name" : "haxe-ws",
+  "description" : "WebSockets everywhere! Including javascript, flash and sys targets.",
+  "version" : "0.0.1",
+  "releasenote": "Initial release",
+  "url" : "https://github.com/soywiz/haxe-ws",
+  "classPath" : "src",
+  "license" : "Public",
+  "tags" : ["websockets","ws","wss","js","cpp","swf","neko","php","python","java","c#","ssl","openssl"],
+  "contributors": ["soywiz"],
+  "dependencies": {
+    "hxssl": "3.0.0-alpha"
+  }
+}

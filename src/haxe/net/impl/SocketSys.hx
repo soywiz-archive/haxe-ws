@@ -6,23 +6,39 @@ import sys.net.Socket;
 
 class SocketSys extends Socket2 {
     private var impl:sys.net.Socket;
+    #if hxssl
+    private var implSsl: sys.ssl.Socket;
+    #else
+    private var implSsl: Dynamic;
+    #end
     private var sendConnect:Bool = false;
     private var sendError:Bool = false;
+    private var secure:Bool;
 
-    public function new(host:String, port:Int, debug:Bool = false) {
+    public function new(host:String, port:Int, secure:Bool, debug:Bool = false) {
         super(host, port, debug);
-        this.impl = new sys.net.Socket();
+        this.secure = secure;
+        var impl:Dynamic = null;
+        if (secure) {
+            #if hxssl
+            this.implSsl = new sys.ssl.Socket();
+            #else
+            throw 'Not supporting secure sockets';
+            #end
+        } else {
+            this.impl = new sys.net.Socket();
+        }
         try {
             this.impl.connect(new Host(host), port);
             //this.impl.setFastSend(true);
             this.impl.setBlocking(false);
             //this.impl.setBlocking(true);
             this.sendConnect = true;
+            if (debug) trace('socket.connected!');
         } catch (e:Dynamic) {
             this.sendError = true;
+            if (debug) trace('socket.error! $e');
         }
-
-        //this.impl.output.writeByte(6);
     }
 
     override public function close() {
@@ -30,23 +46,31 @@ class SocketSys extends Socket2 {
 
     override public function process() {
         if (sendConnect) {
+            if (debug) trace('socket.onconnect!');
             sendConnect = false;
             onconnect();
         }
 
         if (sendError) {
+            if (debug) trace('socket.onerror!');
             sendError = false;
             onerror();
         }
 
-        var result = Socket.select([this.impl], [this.impl], [this.impl], 0.4);
+        var result:Dynamic = null;
+        if (secure) {
+            result = sys.ssl.Socket.select([this.implSsl], [this.implSsl], [this.implSsl], 0.4);
+        } else {
+            result = sys.net.Socket.select([this.impl], [this.impl], [this.impl], 0.4);
+        }
 
         if (result.read.length > 0) {
             var out = new BytesRW();
             try {
+                var input = secure ? this.implSsl.input : this.impl.input;
                 while (true) {
                     var data = Bytes.alloc(1024);
-                    var readed = this.impl.input.readBytes(data, 0, data.length);
+                    var readed = input.readBytes(data, 0, data.length);
                     if (readed <= 0) break;
                     out.writeBytes(data.sub(0, readed));
                 }
@@ -71,8 +95,9 @@ class SocketSys extends Socket2 {
 
     override public function send(data:Bytes) {
         //trace('sending:$data');
-        this.impl.output.write(data);
-        this.impl.output.flush();
+        var output:haxe.io.Output = secure ? this.implSsl.output : this.impl.output;
+        output.write(data);
+        output.flush();
         //this.impl.write
     }
 }

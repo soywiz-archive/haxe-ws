@@ -1,5 +1,6 @@
 package haxe.net.impl;
 
+import flash.net.SecureSocket;
 import haxe.io.Bytes;
 import flash.utils.ByteArray;
 import flash.events.ProgressEvent;
@@ -11,10 +12,10 @@ import flash.net.Socket;
 class SocketFlash extends Socket2 {
     private var impl: Socket;
 
-    public function new(host:String, port:Int, debug:Bool = false) {
+    public function new(host:String, port:Int, secure:Bool, debug:Bool = false) {
         super(host, port, debug);
 
-        this.impl = new Socket();
+        this.impl = secure ? new SecureSocket() : new Socket();
         this.impl.endian = Endian.BIG_ENDIAN;
         this.impl.addEventListener(flash.events.Event.CONNECT, function(e:Event) {
             this.onconnect();

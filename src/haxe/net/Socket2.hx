@@ -36,11 +36,10 @@ class Socket2 {
     }
 
     static public function create(host:String, port:Int, secure:Bool = false, debug:Bool = false):Socket2 {
-        if (secure) throw 'Not supporting secure sockets';
         #if flash
-        return new haxe.net.impl.SocketFlash(host, port);
+        return new haxe.net.impl.SocketFlash(host, port, secure);
         #elseif sys
-        return new haxe.net.impl.SocketSys(host, port);
+        return new haxe.net.impl.SocketSys(host, port, secure);
         #else
         #error "Unsupported platform"
         #end

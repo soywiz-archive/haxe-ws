@@ -27,9 +27,9 @@ class WebSocketGeneric extends WebSocket {
         if (!reg.match(uri)) throw 'Uri not matching websocket uri "${uri}"';
         scheme = reg.matched(1);
         switch (scheme) {
-            case "ws": secure = false;
-            case "wss:": secure = true;
-            default: throw 'Scheme "${host}" is not a valid websocket scheme';
+            case "ws", "ws": secure = false;
+            case "wss", "wss": secure = true;
+            default: throw 'Scheme "${scheme}" is not a valid websocket scheme';
         }
         host = reg.matched(2);
         port = (reg.matched(4) != null) ? Std.parseInt(reg.matched(4)) : 80;

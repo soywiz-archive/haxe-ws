@@ -1,0 +1,12 @@
+-swf output/out.swf
+-swf-version 11
+-cp src
+-main haxe.net.example.WebSocketExample
+
+--next
+
+-neko output/out.n
+-cp src
+-D hxssl=1
+-lib hxssl:3.0.0-alpha
+-main haxe.net.example.WebSocketExample

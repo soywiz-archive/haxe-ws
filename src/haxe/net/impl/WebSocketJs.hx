@@ -1,11 +1,14 @@
 package haxe.net.impl;
 
+import haxe.io.Bytes;
 import haxe.net.WebSocket;
 
 class WebSocketJs extends WebSocket {
     private var impl:js.html.WebSocket;
 
     public function new(url:String, protocols:Array<String> = null) {
+        super();
+
         if (protocols != null) {
             impl = new js.html.WebSocket(url, protocols);
         } else {
@@ -18,13 +21,13 @@ class WebSocketJs extends WebSocket {
             this.onclose();
         };
         impl.onerror = function(e:js.html.Event) {
-            this.onerror();
+            this.onerror('error');
         };
         impl.onmessage = function(e:js.html.MessageEvent) {
             var m = e.data;
             if (Std.is(m, String)) {
                 this.onmessageString(m);
-            } else (Std.is(m, ArrayBuffer)) {
+            } else if (Std.is(m, js.html.ArrayBuffer)) {
                 //haxe.io.Int8Array
                 //js.html.ArrayBuffer
                 trace('Unhandled websocket onmessage ' + m);
@@ -40,6 +43,6 @@ class WebSocketJs extends WebSocket {
     }
 
     override public function sendBytes(message:Bytes) {
-        this.impl.send(message);
+        this.impl.send(message.getData());
     }
 }

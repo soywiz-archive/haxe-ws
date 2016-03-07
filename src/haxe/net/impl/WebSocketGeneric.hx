@@ -11,10 +11,14 @@ class WebSocketGeneric extends WebSocket {
     private var port = 80;
     private var path = "/";
     private var secure = false;
+    private var protocols = [];
     private var state = State.Handshake;
     public var debug:Bool = true;
 
-    public function new(uri:String, origin:String = "http://127.0.0.1/", key:String = "wskey", debug:Bool = true) {
+    public function new(uri:String, protocols:Array<String> = null, origin:String = null, key:String = "wskey", debug:Bool = true) {
+        super();
+        if (origin == null) origin = "http://127.0.0.1/";
+        this.protocols = protocols;
         this.origin = origin;
         this.key = key;
         this.debug = debug;
@@ -24,7 +28,7 @@ class WebSocketGeneric extends WebSocket {
         scheme = reg.matched(1);
         switch (scheme) {
             case "ws": secure = false;
-            case "wss:": secure = true; throw 'Not supporting secure websockets';
+            case "wss:": secure = true;
             default: throw 'Scheme "${host}" is not a valid websocket scheme';
         }
         host = reg.matched(2);
@@ -32,7 +36,7 @@ class WebSocketGeneric extends WebSocket {
         path = reg.matched(5);
         //trace('$scheme, $host, $port, $path');
 
-        socket = Socket2.create();
+        socket = Socket2.create(host, port, secure, debug);
         state = State.Handshake;
         socketData = new BytesRW();
         socket.onconnect = function() {
@@ -146,14 +150,14 @@ class WebSocketGeneric extends WebSocket {
                                 if (frameIsBinary) {
                                     this.onmessageBytes(payload.readAllAvailableBytes());
                                 } else {
-                                    this.onmessageString(payload.readAllAvailableBytes().toString());
+                                    this.onmessageString(Utf8Encoder.decode(payload.readAllAvailableBytes()));
                                 }
                                 payload = null;
                             }
                         case Opcode.Ping:
                             _debug("Received Ping");
                             //onPing.dispatch(null);
-                            sendFrame(payload, Opcode.Pong);
+                            sendFrame(payload.readAllAvailableBytes(), Opcode.Pong);
                         case Opcode.Pong:
                             _debug("Received Pong");
                             //onPong.dispatch(null);
@@ -178,28 +182,22 @@ class WebSocketGeneric extends WebSocket {
     }
 
     private function prepareClientHandshake(url:String, host:String, port:Int, key:String, origin:String):Bytes {
-        var lines = [
-            'GET ${url} HTTP/1.1',
-            'Host: ${host}:${port}',
-            'Pragma:no-cache',
-            'Cache-Control:no-cache',
-            'Upgrade: websocket',
-            'Sec-WebSocket-Version: 13',
-            'Connection: Upgrade',
-            "Sec-WebSocket-Key: " + Base64.encode(Bytes.ofString(key)),
-            'Origin: ${origin}',
-            'User-Agent:Mozilla/5.0'
-        ];
+        var lines = [];
+        lines.push('GET ${url} HTTP/1.1');
+        lines.push('Host: ${host}:${port}');
+        lines.push('Pragma:no-cache');
+        lines.push('Cache-Control:no-cache');
+        lines.push('Upgrade: websocket');
+        if (this.protocols != null) {
+            lines.push('Sec-WebSocket-Protocol: ' + this.protocols.join(', '));
+        }
+        lines.push('Sec-WebSocket-Version: 13');
+        lines.push('Connection: Upgrade');
+        lines.push("Sec-WebSocket-Key: " + Base64.encode(Utf8Encoder.encode(key)));
+        lines.push('Origin: ${origin}');
+        lines.push('User-Agent:Mozilla/5.0');
 
-        return Bytes.ofString(lines.join("\r\n") + "\r\n\r\n");
-    }
-
-    public function sendText(data:String) {
-        sendFrame(Bytes.ofString(data), Opcode.Text);
-    }
-
-    public function sendBinary(data:Bytes) {
-        sendFrame(data, Opcode.Binary);
+        return Utf8Encoder.encode(lines.join("\r\n") + "\r\n\r\n");
     }
 
     public function close() {
@@ -209,6 +207,14 @@ class WebSocketGeneric extends WebSocket {
 
     private function sendFrame(data:Bytes, type:Opcode) {
         writeBytes(prepareFrame(data, type, true));
+    }
+
+    override public function sendString(message:String) {
+        sendFrame(Utf8Encoder.encode(message), Opcode.Text);
+    }
+
+    override public function sendBytes(message:Bytes) {
+        sendFrame(message, Opcode.Binary);
     }
 
     private function prepareFrame(data:Bytes, type:Opcode, isFinal:Bool):Bytes {
@@ -270,71 +276,15 @@ enum State {
     }
 }
 
-class BytesRW {
-    public var available(default, null):Int = 0;
-    private var currentOffset:Int = 0;
-    private var currentData: Bytes = null;
-    private var chunks:Array<Bytes> = [];
-
-    public function writeByte(v:Int) {
-        var b = Bytes.alloc(1);
-        b.set(0, v);
-        writeBytes(b);
+class Utf8Encoder {
+    static public function encode(str:String):Bytes {
+        // @TODO: Proper utf8 encoding!
+        return Bytes.ofString(str);
     }
 
-    public function writeShort(v:Int) {
-        var b = Bytes.alloc(2);
-        b.set(0, (v >> 8) & 0xFF);
-        b.set(1, (v >> 0) & 0xFF);
-        writeBytes(b);
-    }
-
-    public function writeInt(v:Int) {
-        var b = Bytes.alloc(4);
-        b.set(0, (v >> 24) & 0xFF);
-        b.set(1, (v >> 16) & 0xFF);
-        b.set(2, (v >> 8) & 0xFF);
-        b.set(3, (v >> 0) & 0xFF);
-        writeBytes(b);
-    }
-
-    public function writeBytes(data:Bytes) {
-        chunks.push(data);
-        available += data.length;
-    }
-
-    public function readAllAvailableBytes():Bytes {
-        return readBytes(available);
-    }
-
-    public function readBytes(count:Int):Bytes {
-        var count2 = Std.int(Math.min(count, available));
-        var out = Bytes.alloc(count2);
-        for (n in 0 ... count2) out.set(n, readByte());
-        return out;
-    }
-
-    public function readUnsignedShort():UInt {
-        var h = readByte();
-        var l = readByte();
-        return (h << 8) | (l << 0);
-    }
-
-    public function readUnsignedInt():UInt {
-        var v3 = readByte();
-        var v2 = readByte();
-        var v1 = readByte();
-        var v0 = readByte();
-        return (v3 << 24) | (v2 << 16) | (v1 << 8) | (v0 << 0);
-    }
-
-    public function readByte():Int {
-        if (available <= 0) throw 'Not bytes available';
-        while (currentData == null || currentOffset >= currentData.length) {
-            currentOffset = 0;
-            currentData = chunks.shift();
-        }
-        available--;
-        return currentData.get(currentOffset++);
+    static public function decode(data:Bytes):String {
+        // @TODO: Proper utf8 decoding!
+        return data.toString();
     }
 }
+

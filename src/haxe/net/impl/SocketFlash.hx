@@ -11,8 +11,8 @@ import flash.net.Socket;
 class SocketFlash extends Socket2 {
     private var impl: Socket;
 
-    public function new(host:String, port:Int) {
-        super(host, port);
+    public function new(host:String, port:Int, debug:Bool = false) {
+        super(host, port, debug);
 
         this.impl = new Socket();
         this.impl.endian = Endian.BIG_ENDIAN;
@@ -31,7 +31,7 @@ class SocketFlash extends Socket2 {
             this.ondata(Bytes.ofData(out));
         });
 
-        this.impl.connect();
+        this.impl.connect(host, port);
     }
 
     override public function close() {

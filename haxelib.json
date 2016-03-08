@@ -2,7 +2,7 @@
   "name" : "haxe-ws",
   "description" : "WebSockets everywhere! Including javascript, flash and sys targets.",
   "version" : "0.0.2",
-  "releasenote": "Fixed default port for wss://",
+  "releasenote": "- Fixed default port for wss:// - Added support for using javascript websockets when available as ExternalInterface in flash",
   "url" : "https://github.com/soywiz/haxe-ws",
   "classPath" : "src",
   "license" : "Public",

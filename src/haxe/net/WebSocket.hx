@@ -7,10 +7,16 @@ class WebSocket {
     }
 
     static public function create(url:String, protocols:Array<String> = null, origin:String = null, debug:Bool = false):WebSocket {
+
         #if js
         return new haxe.net.impl.WebSocketJs(url, protocols);
         #else
-        return new haxe.net.impl.WebSocketGeneric(url, protocols, origin, "wskey", debug);
+            #if flash
+                if (haxe.net.impl.WebSocketFlashExternalInterface.available()) {
+                    return new haxe.net.impl.WebSocketFlashExternalInterface(url, protocols);
+                }
+            #end
+            return new haxe.net.impl.WebSocketGeneric(url, protocols, origin, "wskey", debug);
         #end
     }
 

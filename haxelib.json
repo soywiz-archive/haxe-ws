@@ -1,8 +1,8 @@
 {
   "name" : "haxe-ws",
   "description" : "WebSockets everywhere! Including javascript, flash and sys targets.",
-  "version" : "0.0.3",
-  "releasenote": "",
+  "version" : "0.0.4",
+  "releasenote": "Fixed client to send masked messages",
   "url" : "https://github.com/soywiz/haxe-ws",
   "classPath" : "src",
   "license" : "Public",

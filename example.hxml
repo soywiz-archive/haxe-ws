@@ -1,5 +1,7 @@
 -swf output/out.swf
 -swf-version 11
+-swf-header 1280:720:24:FFFFFF
+#-D native_trace
 -cp src
 -main haxe.net.example.WebSocketExample
 

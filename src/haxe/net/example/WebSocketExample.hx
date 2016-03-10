@@ -7,6 +7,7 @@ class WebSocketExample {
         ws.onopen = function() {
             trace('open!');
             ws.sendString('hello friend!');
+            ws.sendString('hello my dearest friend! this is a longer message! which is longer than 126 bytes, so it sends a short instead of just a single byte. And yeah, it should be longer thant that by now!');
         };
         ws.onmessageString = function(message) {
             trace('message from server!' + message);

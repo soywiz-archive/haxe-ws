@@ -20,6 +20,14 @@ class WebSocket {
         #end
     }
 
+    static dynamic public function defer(callback: Void -> Void) {
+        #if (flash || js)
+        haxe.Timer.delay(callback, 0);
+        #else
+        callback();
+        #end
+    }
+
     public function process() {
     }
 

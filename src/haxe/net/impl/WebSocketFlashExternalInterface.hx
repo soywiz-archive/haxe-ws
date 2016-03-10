@@ -43,32 +43,28 @@ class WebSocketFlashExternalInterface extends WebSocket {
         initializedOnce = true;
         ExternalInterface.addCallback('websocketOpen', function(index:Int) {
             if (debug) trace('js.websocketOpen[$index]');
-            defer(function() {
+            WebSocket.defer(function() {
                 sockets[index].onopen();
             });
         });
         ExternalInterface.addCallback('websocketClose', function(index:Int) {
             if (debug) trace('js.websocketClose[$index]');
-            defer(function() {
+            WebSocket.defer(function() {
                 sockets[index].onclose();
             });
         });
         ExternalInterface.addCallback('websocketError', function(index:Int) {
             if (debug) trace('js.websocketError[$index]');
-            defer(function() {
+            WebSocket.defer(function() {
                 sockets[index].onerror('error');
             });
         });
         ExternalInterface.addCallback('websocketRecv', function(index:Int, data:Dynamic) {
             if (debug) trace('js.websocketRecv[$index]: $data');
-            defer(function() {
+            WebSocket.defer(function() {
                 sockets[index].onmessageString(data);
             });
         });
-    }
-
-    static public dynamic function defer(callback: Void -> Void): Void {
-        haxe.Timer.delay(callback, 0);
     }
 
     override public function sendBytes(message:Bytes) {
@@ -80,7 +76,7 @@ class WebSocketFlashExternalInterface extends WebSocket {
     }
 
     private function _send(message:Dynamic) {
-        defer(function() {
+        WebSocket.defer(function() {
             var success = ExternalInterface.call("function(index, message) {
                 try {
                     window.websocketjsList[index].send(message);

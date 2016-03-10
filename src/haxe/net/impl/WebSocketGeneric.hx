@@ -85,7 +85,7 @@ class WebSocketGeneric extends WebSocket {
     private var frameIsBinary:Bool;
     private var partialLength:Int;
     private var length:Int;
-    private var mask:Int;
+    private var mask:Bytes;
     private var httpHeader:String = "";
     private var lastPong:Date = null;
     private var payload:BytesRW = null;
@@ -136,7 +136,7 @@ class WebSocketGeneric extends WebSocket {
                 case State.HeadExtraMask:
                     if (isMasked) {
                         if (socketData.available < 4) return;
-                        mask = socketData.readUnsignedInt();
+                        mask = socketData.readBytes(4);
                     }
                     state = State.Body;
                 case State.Body:
@@ -147,10 +147,12 @@ class WebSocketGeneric extends WebSocket {
                         case Opcode.Binary | Opcode.Text | Opcode.Continuation:
                             _debug("Received message, " + "Type: " + opcode);
                             if (isFinal) {
+                                var messageData = payload.readAllAvailableBytes();
+                                var unmakedMessageData = (isMasked) ? applyMask(messageData, mask) : messageData;
                                 if (frameIsBinary) {
-                                    this.onmessageBytes(payload.readAllAvailableBytes());
+                                    this.onmessageBytes(unmakedMessageData);
                                 } else {
-                                    this.onmessageString(Utf8Encoder.decode(payload.readAllAvailableBytes()));
+                                    this.onmessageString(Utf8Encoder.decode(unmakedMessageData));
                                 }
                                 payload = null;
                             }
@@ -217,9 +219,25 @@ class WebSocketGeneric extends WebSocket {
         sendFrame(message, Opcode.Binary);
     }
 
+    static private function generateMask() {
+        var maskData = Bytes.alloc(4);
+        maskData.set(0, Std.random(256));
+        maskData.set(1, Std.random(256));
+        maskData.set(2, Std.random(256));
+        maskData.set(3, Std.random(256));
+        return maskData;
+    }
+
+    static private function applyMask(payload:Bytes, mask:Bytes) {
+        var maskedPayload = Bytes.alloc(payload.length);
+        for (n in 0 ... payload.length) maskedPayload.set(n, payload.get(n) ^ mask.get(n % mask.length));
+        return maskedPayload;
+    }
+
     private function prepareFrame(data:Bytes, type:Opcode, isFinal:Bool):Bytes {
         var out = new BytesRW();
-        var isMasked = false;
+        var isMasked = true; // All clientes messages must be masked: http://tools.ietf.org/html/rfc6455#section-5.1
+        var mask = generateMask();
         var sizeMask = (isMasked ? 0x80 : 0x00);
 
         out.writeByte(type.toInt() | (isFinal ? 0x80 : 0x00));
@@ -234,7 +252,9 @@ class WebSocketGeneric extends WebSocket {
             out.writeInt(data.length);
         }
 
-        out.writeBytes(data);
+        if (isMasked) out.writeBytes(mask);
+
+        out.writeBytes(isMasked ? applyMask(data, mask) : data);
         return out.readAllAvailableBytes();
     }
 }

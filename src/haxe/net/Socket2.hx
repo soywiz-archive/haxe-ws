@@ -35,7 +35,7 @@ class Socket2 {
     public function send(data:Bytes) {
     }
 
-    static public function create(host:String, port:Int, secure:Bool = false, debug:Bool = false):Socket2 {
+    dynamic static public function create(host:String, port:Int, secure:Bool = false, debug:Bool = false):Socket2 {
         #if flash
         return new haxe.net.impl.SocketFlash(host, port, secure);
         #elseif sys

@@ -6,8 +6,7 @@ class WebSocket {
     private function new() {
     }
 
-    static public function create(url:String, protocols:Array<String> = null, origin:String = null, debug:Bool = false):WebSocket {
-
+    dynamic static public function create(url:String, protocols:Array<String> = null, origin:String = null, debug:Bool = false):WebSocket {
         #if js
         return new haxe.net.impl.WebSocketJs(url, protocols);
         #else

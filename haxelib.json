@@ -9,6 +9,5 @@
   "tags" : ["websockets","ws","wss","js","cpp","swf","neko","php","python","java","c#","ssl","openssl"],
   "contributors": ["soywiz"],
   "dependencies": {
-    "hxssl": "3.0.0-alpha"
   }
 }

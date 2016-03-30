@@ -1,3 +1,6 @@
+/.idea
+/*.iws
+/*.ipr
 /*.iml
 /output
 /target

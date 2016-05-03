@@ -15,7 +15,11 @@ class SocketSys extends Socket2 {
         this.secure = secure;
         var impl:Dynamic = null;
         if (secure) {
-            throw 'Not supporting secure sockets';
+            #if (haxe_ver >= "3.3")
+                this.impl = new sys.ssl.Socket();
+            #else
+                throw 'Not supporting secure sockets';
+            #end
         } else {
             this.impl = new sys.net.Socket();
         }

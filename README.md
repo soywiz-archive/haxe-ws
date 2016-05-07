@@ -1,4 +1,4 @@
-[https://img.shields.io/github/tag/soywiz/haxe-ws.svg?style=flat&label=haxelib](http://lib.haxe.org/p/haxe-ws)
+[![Haxelib Version](https://img.shields.io/github/tag/soywiz/haxe-ws.svg?style=flat&label=haxelib)](http://lib.haxe.org/p/haxe-ws)
 
 WebSockets everywhere! Including javascript, flash and sys targets.
 

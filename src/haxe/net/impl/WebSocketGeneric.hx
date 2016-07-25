@@ -187,8 +187,8 @@ class WebSocketGeneric extends WebSocket {
         var lines = [];
         lines.push('GET ${url} HTTP/1.1');
         lines.push('Host: ${host}:${port}');
-        lines.push('Pragma:no-cache');
-        lines.push('Cache-Control:no-cache');
+        lines.push('Pragma: no-cache');
+        lines.push('Cache-Control: no-cache');
         lines.push('Upgrade: websocket');
         if (this.protocols != null) {
             lines.push('Sec-WebSocket-Protocol: ' + this.protocols.join(', '));
@@ -197,7 +197,7 @@ class WebSocketGeneric extends WebSocket {
         lines.push('Connection: Upgrade');
         lines.push("Sec-WebSocket-Key: " + Base64.encode(Utf8Encoder.encode(key)));
         lines.push('Origin: ${origin}');
-        lines.push('User-Agent:Mozilla/5.0');
+        lines.push('User-Agent: Mozilla/5.0');
 
         return Utf8Encoder.encode(lines.join("\r\n") + "\r\n\r\n");
     }

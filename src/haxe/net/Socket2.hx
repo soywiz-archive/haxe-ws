@@ -37,9 +37,9 @@ class Socket2 {
 
     dynamic static public function create(host:String, port:Int, secure:Bool = false, debug:Bool = false):Socket2 {
         #if flash
-        return new haxe.net.impl.SocketFlash(host, port, secure);
+        return new haxe.net.impl.SocketFlash(host, port, secure, debug);
         #elseif sys
-        return new haxe.net.impl.SocketSys(host, port, secure);
+        return new haxe.net.impl.SocketSys(host, port, secure, debug);
         #else
         #error "Unsupported platform"
         #end

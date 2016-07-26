@@ -1,13 +1,13 @@
 {
   "name" : "haxe-ws",
   "description" : "WebSockets everywhere! Including javascript, flash and sys targets.",
-  "version" : "0.0.6",
-  "releasenote": "Enabled standard secure sockets for haxe >= 3.3",
+  "version" : "0.1.0
+  "releasenote": "Handshake header adjustments + forward missing debug parameter + handle js.html.Blob message and pass it to onmessageBytes()",
   "url" : "https://github.com/soywiz/haxe-ws",
   "classPath" : "src",
   "license" : "Public",
   "tags" : ["websockets","ws","wss","js","cpp","swf","neko","php","python","java","c#","ssl","openssl"],
-  "contributors": ["soywiz"],
+  "contributors": ["soywiz","psmtec-dklein"],
   "dependencies": {
   }
 }

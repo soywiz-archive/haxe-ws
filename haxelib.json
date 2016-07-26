@@ -1,7 +1,7 @@
 {
   "name" : "haxe-ws",
   "description" : "WebSockets everywhere! Including javascript, flash and sys targets.",
-  "version" : "0.1.0
+  "version" : "0.1.0",
   "releasenote": "Handshake header adjustments + forward missing debug parameter + handle js.html.Blob message and pass it to onmessageBytes()",
   "url" : "https://github.com/soywiz/haxe-ws",
   "classPath" : "src",

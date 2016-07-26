@@ -7,7 +7,7 @@
   "classPath" : "src",
   "license" : "Public",
   "tags" : ["websockets","ws","wss","js","cpp","swf","neko","php","python","java","c#","ssl","openssl"],
-  "contributors": ["soywiz","psmtec-dklein"],
+  "contributors": ["soywiz"],
   "dependencies": {
   }
 }

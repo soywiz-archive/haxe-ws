@@ -22,7 +22,7 @@ class WebSocketGeneric extends WebSocket {
         this.origin = origin;
         this.key = key;
         this.debug = debug;
-        var reg = ~/^(\w+?):\/\/([\w\.]+)(:(\d+))?(\/.*)?$/;
+        var reg = ~/^(\w+?):\/\/([\w\.-]+)(:(\d+))?(\/.*)?$/;
         //var reg = ~/^(\w+?):/;
         if (!reg.match(uri)) throw 'Uri not matching websocket uri "${uri}"';
         scheme = reg.matched(1);
@@ -34,6 +34,7 @@ class WebSocketGeneric extends WebSocket {
         host = reg.matched(2);
         port = (reg.matched(4) != null) ? Std.parseInt(reg.matched(4)) : (secure ? 443 : 80);
         path = reg.matched(5);
+		if (path == null) path = '/';
         //trace('$scheme, $host, $port, $path');
 
         socket = Socket2.create(host, port, secure, debug);

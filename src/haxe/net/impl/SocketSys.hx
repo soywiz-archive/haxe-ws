@@ -1,6 +1,8 @@
 package haxe.net.impl;
 
+import haxe.Constraints.Function;
 import haxe.io.Bytes;
+import haxe.io.Error;
 import sys.net.Host;
 import sys.net.Socket;
 
@@ -9,9 +11,11 @@ class SocketSys extends Socket2 {
     private var sendConnect:Bool = false;
     private var sendError:Bool = false;
     private var secure:Bool;
+	private var isClosed:Bool = false;
 
-    public function new(host:String, port:Int, secure:Bool, debug:Bool = false) {
-        super(host, port, debug);
+    private function new(host:String, port:Int, debug:Bool = false) super(host, port, debug);
+	
+	function initialize(secure:Bool) {
         this.secure = secure;
         var impl:Dynamic = null;
         if (secure) {
@@ -34,9 +38,28 @@ class SocketSys extends Socket2 {
             this.sendError = true;
             if (debug) trace('socket.error! $e');
         }
+		
+		return this;
     }
+	
+	public static function create(host:String, port:Int, secure:Bool, debug:Bool = false) {
+		return new SocketSys(host, port, debug).initialize(secure);
+	}
+	
+	static function createFromExistingSocket(socket:sys.net.Socket, debug:Bool) {
+		var socketSys = new SocketSys(socket.host().host.host, socket.host().port, debug);
+		socket.setBlocking(false);
+		socketSys.impl = socket;
+		socketSys.secure = false;
+		return socketSys;
+	}
 
     override public function close() {
+		if (!isClosed) {
+			isClosed = true;
+			impl.close();
+			onclose();
+		}
     }
 
     override public function process() {
@@ -53,9 +76,10 @@ class SocketSys extends Socket2 {
         }
 
         var result = sys.net.Socket.select([this.impl], [this.impl], [this.impl], 0.4);
-
+		
         if (result.read.length > 0) {
             var out = new BytesRW();
+			var needClose:Bool = false;
             try {
                 var input = this.impl.input;
                 while (true) {
@@ -65,9 +89,12 @@ class SocketSys extends Socket2 {
                     out.writeBytes(data.sub(0, readed));
                 }
             } catch (e:Dynamic) {
-
-            }
-            ondata(out.readAllAvailableBytes());
+				needClose = !(Std.is(e, Error) && (e:Error).match(Error.Blocked));
+            } 
+			ondata(out.readAllAvailableBytes());
+			if (needClose) {
+				close();
+			}
         }
     }
 

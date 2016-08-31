@@ -2,6 +2,7 @@ package haxe.net.impl;
 
 import haxe.crypto.Base64;
 import haxe.io.Bytes;
+import haxe.net.Socket2;
 class WebSocketGeneric extends WebSocket {
     private var socket:Socket2;
     private var origin = "http://127.0.0.1/";
@@ -15,8 +16,7 @@ class WebSocketGeneric extends WebSocket {
     private var state = State.Handshake;
     public var debug:Bool = true;
 
-    public function new(uri:String, protocols:Array<String> = null, origin:String = null, key:String = "wskey", debug:Bool = true) {
-        super();
+	function initialize(uri:String, protocols:Array<String> = null, origin:String = null, key:String = "wskey", debug:Bool = true) {
         if (origin == null) origin = "http://127.0.0.1/";
         this.protocols = protocols;
         this.origin = origin;
@@ -39,12 +39,18 @@ class WebSocketGeneric extends WebSocket {
 
         socket = Socket2.create(host, port, secure, debug);
         state = State.Handshake;
-        socketData = new BytesRW();
         socket.onconnect = function() {
             _debug('socket connected');
             writeBytes(prepareClientHandshake(path, host, port, key, origin));
             //this.onopen();
         };
+		commonInitialize();
+		
+		return this;
+	}
+	
+	function commonInitialize() {
+        socketData = new BytesRW();
         socket.onclose = function() {
             _debug('socket closed');
             this.onclose();
@@ -57,9 +63,20 @@ class WebSocketGeneric extends WebSocket {
             socketData.writeBytes(data);
             handleData();
         };
-
-
-    }
+	}
+	
+	public static function create(uri:String, protocols:Array<String> = null, origin:String = null, key:String = "wskey", debug:Bool = true) {
+		return new WebSocketGeneric().initialize(uri, protocols, origin, key, debug);
+	}
+	
+	static function createFromExistingSocket(socket:Socket2, debug:Bool) {
+		var websocket = new WebSocketGeneric();
+		websocket.socket = socket;
+		websocket.state = State.Head;
+		websocket.debug = debug;
+		websocket.commonInitialize();
+		return websocket;
+	}
 
     override public function process() {
         socket.process();
@@ -113,6 +130,7 @@ class WebSocketGeneric extends WebSocket {
                     state = State.Head;
                 case State.Head:
                     if (socketData.available < 2) return;
+					
                     var b0 = socketData.readByte();
                     var b1 = socketData.readByte();
 
@@ -166,9 +184,9 @@ class WebSocketGeneric extends WebSocket {
                             //onPong.dispatch(null);
                             lastPong = Date.now();
                         case Opcode.Close:
-                            _debug("Socket Closed");
+                            _debug("Received Close");
                         //onClose.dispatch(null);
-                        //socket.close();
+							socket.close();
                     }
                     state = State.Head;
                 default:

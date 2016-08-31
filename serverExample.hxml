@@ -1,0 +1,9 @@
+-neko output/serverExample.n
+-cp src
+-main haxe.net.example.WebSocketServerExample
+
+--next
+
+-cpp output/serverExampleCpp
+-cp src
+-main haxe.net.example.WebSocketServerExample

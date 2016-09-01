@@ -1,6 +1,7 @@
 package haxe.net.impl;
 
 import haxe.io.Bytes;
+import haxe.io.Error;
 import sys.net.Host;
 import sys.net.Socket;
 
@@ -8,6 +9,7 @@ class SocketSys extends Socket2 {
     private var impl:sys.net.Socket;
     private var sendConnect:Bool = false;
     private var sendError:Bool = false;
+	private var wasCloseSent:Bool = false;
     private var secure:Bool;
 
     public function new(host:String, port:Int, secure:Bool, debug:Bool = false) {
@@ -37,6 +39,12 @@ class SocketSys extends Socket2 {
     }
 
     override public function close() {
+		this.impl.close();
+		if (!wasCloseSent) {
+			wasCloseSent = true;
+			if (debug) trace('socket.onclose!');
+			onclose();
+		}
     }
 
     override public function process() {
@@ -51,24 +59,34 @@ class SocketSys extends Socket2 {
             sendError = false;
             onerror();
         }
+		
+		var needClose = false;
+		try {
+			var result = sys.net.Socket.select([this.impl], [this.impl], [this.impl], 0.4);
 
-        var result = sys.net.Socket.select([this.impl], [this.impl], [this.impl], 0.4);
-
-        if (result.read.length > 0) {
-            var out = new BytesRW();
-            try {
-                var input = this.impl.input;
-                while (true) {
-                    var data = Bytes.alloc(1024);
-                    var readed = input.readBytes(data, 0, data.length);
-                    if (readed <= 0) break;
-                    out.writeBytes(data.sub(0, readed));
-                }
-            } catch (e:Dynamic) {
-
-            }
-            ondata(out.readAllAvailableBytes());
-        }
+			if (result.read.length > 0) {
+				var out = new BytesRW();
+				try {
+					var input = this.impl.input;
+					while (true) {
+						var data = Bytes.alloc(1024);
+						var readed = input.readBytes(data, 0, data.length);
+						if (readed <= 0) break;
+						out.writeBytes(data.sub(0, readed));
+					}
+				} catch (e:Dynamic) {
+					needClose = !(Std.is(e, Error) && (e:Error).match(Error.Blocked));
+				}
+				ondata(out.readAllAvailableBytes());
+			}
+		}
+		catch (e:Dynamic) {
+			needClose = true;
+		}
+		
+		if (needClose) {
+			close();
+		}
     }
 
     override public dynamic function onconnect() {

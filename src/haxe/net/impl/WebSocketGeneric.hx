@@ -13,6 +13,7 @@ class WebSocketGeneric extends WebSocket {
     private var secure = false;
     private var protocols = [];
     private var state = State.Handshake;
+	public var isClosed:Bool = false;
     public var debug:Bool = true;
 
     public function new(uri:String, protocols:Array<String> = null, origin:String = null, key:String = "wskey", debug:Bool = true) {
@@ -47,7 +48,7 @@ class WebSocketGeneric extends WebSocket {
         };
         socket.onclose = function() {
             _debug('socket closed');
-            this.onclose();
+            setClosed();
         };
         socket.onerror = function() {
             _debug('ioerror: ');
@@ -167,8 +168,8 @@ class WebSocketGeneric extends WebSocket {
                             lastPong = Date.now();
                         case Opcode.Close:
                             _debug("Socket Closed");
-                        //onClose.dispatch(null);
-                        //socket.close();
+							setClosed();
+							socket.close();
                     }
                     state = State.Head;
                 default:
@@ -179,6 +180,13 @@ class WebSocketGeneric extends WebSocket {
         //trace('data!' + socket.bytesAvailable);
         //trace(socket.readUTFBytes(socket.bytesAvailable));
     }
+	
+	private function setClosed() {
+		if (!isClosed) {
+			isClosed = true;
+			onclose();
+		}
+	}
 
     private function ping() {
         sendFrame(Bytes.alloc(0), Opcode.Ping);
@@ -203,9 +211,10 @@ class WebSocketGeneric extends WebSocket {
         return Utf8Encoder.encode(lines.join("\r\n") + "\r\n\r\n");
     }
 
-    public function close() {
+    override public function close() {
         sendFrame(Bytes.alloc(0), Opcode.Close);
         socket.close();
+		setClosed();
     }
 
     private function sendFrame(data:Bytes, type:Opcode) {

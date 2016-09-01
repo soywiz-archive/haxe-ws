@@ -35,6 +35,9 @@ class WebSocket {
 
     public function sendBytes(message:Bytes) {
     }
+	
+	public function close() {
+	}
 
     public dynamic function onopen():Void {
     }

@@ -14,6 +14,7 @@ class WebSocketGeneric extends WebSocket {
     private var secure = false;
     private var protocols = [];
     private var state = State.Handshake;
+	public var isClosed:Bool = false;
     public var debug:Bool = true;
 
 	function initialize(uri:String, protocols:Array<String> = null, origin:String = null, key:String = "wskey", debug:Bool = true) {
@@ -53,7 +54,7 @@ class WebSocketGeneric extends WebSocket {
         socketData = new BytesRW();
         socket.onclose = function() {
             _debug('socket closed');
-            this.onclose();
+            setClosed();
         };
         socket.onerror = function() {
             _debug('ioerror: ');
@@ -69,7 +70,7 @@ class WebSocketGeneric extends WebSocket {
 		return new WebSocketGeneric().initialize(uri, protocols, origin, key, debug);
 	}
 	
-	static function createFromExistingSocket(socket:Socket2, debug:Bool) {
+	public static function createFromExistingSocket(socket:Socket2, debug:Bool) {
 		var websocket = new WebSocketGeneric();
 		websocket.socket = socket;
 		websocket.state = State.Head;
@@ -184,8 +185,8 @@ class WebSocketGeneric extends WebSocket {
                             //onPong.dispatch(null);
                             lastPong = Date.now();
                         case Opcode.Close:
-                            _debug("Received Close");
-                        //onClose.dispatch(null);
+                            _debug("Socket Closed");
+							setClosed();
 							socket.close();
                     }
                     state = State.Head;
@@ -197,6 +198,13 @@ class WebSocketGeneric extends WebSocket {
         //trace('data!' + socket.bytesAvailable);
         //trace(socket.readUTFBytes(socket.bytesAvailable));
     }
+	
+	private function setClosed() {
+		if (!isClosed) {
+			isClosed = true;
+			onclose();
+		}
+	}
 
     private function ping() {
         sendFrame(Bytes.alloc(0), Opcode.Ping);
@@ -221,9 +229,10 @@ class WebSocketGeneric extends WebSocket {
         return Utf8Encoder.encode(lines.join("\r\n") + "\r\n\r\n");
     }
 
-    public function close() {
+    override public function close() {
         sendFrame(Bytes.alloc(0), Opcode.Close);
         socket.close();
+		setClosed();
     }
 
     private function sendFrame(data:Bytes, type:Opcode) {

@@ -10,12 +10,13 @@ class SocketSys extends Socket2 {
     private var impl:sys.net.Socket;
     private var sendConnect:Bool = false;
     private var sendError:Bool = false;
+	private var wasCloseSent:Bool = false;
     private var secure:Bool;
 	private var isClosed:Bool = false;
 
     private function new(host:String, port:Int, debug:Bool = false) super(host, port, debug);
 	
-	function initialize(secure:Bool) {
+	private function initialize(secure:Bool) {
         this.secure = secure;
         var impl:Dynamic = null;
         if (secure) {
@@ -55,9 +56,10 @@ class SocketSys extends Socket2 {
 	}
 
     override public function close() {
-		if (!isClosed) {
-			isClosed = true;
-			impl.close();
+		this.impl.close();
+		if (!wasCloseSent) {
+			wasCloseSent = true;
+			if (debug) trace('socket.onclose!');
 			onclose();
 		}
     }
@@ -74,28 +76,34 @@ class SocketSys extends Socket2 {
             sendError = false;
             onerror();
         }
-
-        var result = sys.net.Socket.select([this.impl], [this.impl], [this.impl], 0.4);
 		
-        if (result.read.length > 0) {
-            var out = new BytesRW();
-			var needClose:Bool = false;
-            try {
-                var input = this.impl.input;
-                while (true) {
-                    var data = Bytes.alloc(1024);
-                    var readed = input.readBytes(data, 0, data.length);
-                    if (readed <= 0) break;
-                    out.writeBytes(data.sub(0, readed));
-                }
-            } catch (e:Dynamic) {
-				needClose = !(Std.is(e, Error) && (e:Error).match(Error.Blocked));
-            } 
-			ondata(out.readAllAvailableBytes());
-			if (needClose) {
-				close();
+		var needClose = false;
+		try {
+			var result = sys.net.Socket.select([this.impl], [this.impl], [this.impl], 0.4);
+
+			if (result.read.length > 0) {
+				var out = new BytesRW();
+				try {
+					var input = this.impl.input;
+					while (true) {
+						var data = Bytes.alloc(1024);
+						var readed = input.readBytes(data, 0, data.length);
+						if (readed <= 0) break;
+						out.writeBytes(data.sub(0, readed));
+					}
+				} catch (e:Dynamic) {
+					needClose = !(Std.is(e, Error) && (e:Error).match(Error.Blocked));
+				}
+				ondata(out.readAllAvailableBytes());
 			}
-        }
+		}
+		catch (e:Dynamic) {
+			needClose = true;
+		}
+		
+		if (needClose) {
+			close();
+		}
     }
 
     override public dynamic function onconnect() {

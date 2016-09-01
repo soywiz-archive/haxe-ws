@@ -1,6 +1,7 @@
 package haxe.net.impl;
 
 import haxe.crypto.Base64;
+import haxe.crypto.Sha1;
 import haxe.io.Bytes;
 import haxe.net.Socket2;
 class WebSocketGeneric extends WebSocket {
@@ -10,11 +11,10 @@ class WebSocketGeneric extends WebSocket {
     private var key = "wskey";
     private var host = "127.0.0.1";
     private var port = 80;
-    private var path = "/";
+    public var path(default, null) = "/";
     private var secure = false;
     private var protocols = [];
     private var state = State.Handshake;
-	public var isClosed:Bool = false;
     public var debug:Bool = true;
 
 	function initialize(uri:String, protocols:Array<String> = null, origin:String = null, key:String = "wskey", debug:Bool = true) {
@@ -70,12 +70,19 @@ class WebSocketGeneric extends WebSocket {
 		return new WebSocketGeneric().initialize(uri, protocols, origin, key, debug);
 	}
 	
-	public static function createFromExistingSocket(socket:Socket2, debug:Bool) {
+	/**
+	 * create server websocket from socket returned by accept()
+	 * @param	socket - accepted socket 
+	 * @param	alredyRecieved - data already read from socket, it should be no more then full http header
+	 * @param	debug - debug messages?
+	 */
+	public static function createFromAcceptedSocket(socket:Socket2, alredyRecieved:String = '', debug:Bool = true) {
 		var websocket = new WebSocketGeneric();
 		websocket.socket = socket;
-		websocket.state = State.Head;
 		websocket.debug = debug;
 		websocket.commonInitialize();
+		websocket.state = State.ServerHandshake;
+		websocket.httpHeader = alredyRecieved;
 		return websocket;
 	}
 
@@ -115,20 +122,33 @@ class WebSocketGeneric extends WebSocket {
 
             switch (state) {
                 case State.Handshake:
-                    var found = false;
-                    while (socketData.available > 0) {
-                        httpHeader += String.fromCharCode(socketData.readByte());
-                        //trace(httpHeader.substr( -4));
-                        if (httpHeader.substr(-4) == "\r\n\r\n") {
-                            found = true;
-                            break;
-                        }
-                    }
-                    if (!found) return;
-
+					if (!readHttpHeader()) {
+						return;
+					}
+					
                     this.onopen();
 
                     state = State.Head;
+				case State.ServerHandshake:
+					if (!readHttpHeader()) {
+						return;
+					}
+					
+					try {
+						var handshake = prepareServerHandshake();
+						_debug('Sending responce: $handshake');
+						socket.send(Bytes.ofString(handshake));
+						
+						this.onopen();
+						
+						state = State.Head;
+					}
+					catch (e:String) {
+						socket.send(Bytes.ofString(prepareHttp400(e)));
+						_debug('Error in http request: $e');
+						socket.close();
+						state = State.Closed;
+					}
                 case State.Head:
                     if (socketData.available < 2) return;
 					
@@ -200,8 +220,8 @@ class WebSocketGeneric extends WebSocket {
     }
 	
 	private function setClosed() {
-		if (!isClosed) {
-			isClosed = true;
+		if (state != State.Closed) {
+			state = State.Closed;
 			onclose();
 		}
 	}
@@ -209,6 +229,87 @@ class WebSocketGeneric extends WebSocket {
     private function ping() {
         sendFrame(Bytes.alloc(0), Opcode.Ping);
     }
+	
+	private function readHttpHeader():Bool {
+		var found = false;
+		while (socketData.available > 0) {
+			httpHeader += String.fromCharCode(socketData.readByte());
+			//trace(httpHeader.substr( -4));
+			if (httpHeader.substr(-4) == "\r\n\r\n") {
+				found = true;
+				break;
+			}
+		}
+		return found;
+	}
+	
+	private function prepareServerHandshake() {
+		if (debug) trace('HTTP request: \n$httpHeader');
+		
+		var requestLines = httpHeader.split('\r\n');
+		requestLines.pop(); 
+		requestLines.pop(); 
+		
+		var firstLine = requestLines.shift();
+		var regexp = ~/^GET (.*) HTTP\/1.1$/;
+		if (!regexp.match(firstLine)) throw 'First line of HTTP request is invalid: "$firstLine"';
+		path = regexp.matched(1);
+		
+		
+		var acceptKey:String = {
+			var key:String = null;
+			var version:String = null;
+			var upgrade:String = null;
+			var connection:String = null;
+			var regexp = ~/^(.*): (.*)$/;
+			for (header in requestLines) {
+				if (!regexp.match(header)) throw 'HTTP request line is invalid: "$header"';
+				var name = regexp.matched(1);
+				var value = regexp.matched(2);
+				switch(name) {
+					case 'Sec-WebSocket-Key': key = value;
+					case 'Sec-WebSocket-Version': version = value;
+					case 'Upgrade': upgrade = value;
+					case 'Connection': connection = value;
+				}
+			}
+			
+			if (
+				version != '13' 
+				|| upgrade != 'websocket' 
+				|| connection.indexOf('Upgrade') < 0
+				|| key == null
+			) {
+				throw [
+					'"Sec-WebSocket-Version" is "$version", should be 13',
+					'"upgrade" is "$upgrade", should be "websocket"',
+					'"Sec-WebSocket-Key" is "$key", should be present'
+				].join('\n');
+			}
+			
+			Base64.encode(Sha1.make(Bytes.ofString(key + '258EAFA5-E914-47DA-95CA-C5AB0DC85B11')));
+		}
+		
+		if (debug) trace('Websocket succefully connected');
+		
+		return [
+			'HTTP/1.1 101 Switching Protocols',
+			'Upgrade: websocket',
+			'Connection: Upgrade',
+			'Sec-WebSocket-Accept: $acceptKey',
+			'',	''
+		].join('\r\n');
+		
+	}
+	
+	private function prepareHttp400(message:String) {
+		return [
+			'HTTP/1.1 400 Bad request',
+			'',	
+			'<h1>HTTP 400 Bad request</h1>',
+			message
+		].join('\r\n');
+	}
 
     private function prepareClientHandshake(url:String, host:String, port:Int, key:String, origin:String):Bytes {
         var lines = [];
@@ -289,10 +390,12 @@ class WebSocketGeneric extends WebSocket {
 
 enum State {
     Handshake;
+	ServerHandshake;
     Head;
     HeadExtraLength;
     HeadExtraMask;
     Body;
+	Closed;
 }
 
 @:enum abstract WebSocketCloseCode(Int) {

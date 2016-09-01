@@ -58,6 +58,7 @@ class SocketSys extends Socket2 {
     override public function close() {
 		this.impl.close();
 		if (!wasCloseSent) {
+			
 			wasCloseSent = true;
 			if (debug) trace('socket.onclose!');
 			onclose();
@@ -93,11 +94,13 @@ class SocketSys extends Socket2 {
 					}
 				} catch (e:Dynamic) {
 					needClose = !(Std.is(e, Error) && (e:Error).match(Error.Blocked));
+					if(needClose && debug) trace('closing socket because of $e');
 				}
 				ondata(out.readAllAvailableBytes());
 			}
 		}
 		catch (e:Dynamic) {
+			if(debug) trace('closing socket because of $e');
 			needClose = true;
 		}
 		

@@ -18,6 +18,19 @@ class WebSocket {
             return haxe.net.impl.WebSocketGeneric.create(url, protocols, origin, "wskey", debug);
         #end
     }
+	
+	#if sys
+	/**
+	 * create server websocket from socket returned by accept()
+	 * wait for onopen() to be called before using websocket
+	 * @param	socket - accepted socket 
+	 * @param	alredyRecieved - data already read from socket, it should be no more then full http header
+	 * @param	debug - debug messages?
+	 */
+	static public function createFromAcceptedSocket(socket:Socket2, alreadyRecieved:String = '', debug:Bool = false):WebSocket {
+		return haxe.net.impl.WebSocketGeneric.createFromAcceptedSocket(socket, alreadyRecieved, debug);
+	}
+	#end
 
     static dynamic public function defer(callback: Void -> Void) {
         #if (flash || js)

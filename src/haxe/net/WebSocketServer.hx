@@ -25,7 +25,7 @@ class WebSocketServer {
 	public function accept():WebSocket {
 		try {
 			var socket = _listenSocket.accept();
-			return WebSocketGeneric.createFromAcceptedSocket(Socket2.createFromExistingSocket(socket, _isDebug), '', _isDebug);
+			return WebSocket.createFromAcceptedSocket(Socket2.createFromExistingSocket(socket, _isDebug), '', _isDebug);
 		}
 		catch (e:Dynamic) {
 			if (e == 'Blocking' || e == Error.Blocked) {

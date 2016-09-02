@@ -66,24 +66,17 @@ class WebSocketGeneric extends WebSocket {
         };
 	}
 	
-	public static function create(uri:String, protocols:Array<String> = null, origin:String = null, key:String = "wskey", debug:Bool = true) {
+	public static function create(uri:String, protocols:Array<String> = null, origin:String = null, key:String = "wskey", debug:Bool) {
 		return new WebSocketGeneric().initialize(uri, protocols, origin, key, debug);
 	}
 	
-	/**
-	 * create server websocket from socket returned by accept()
-	 * wait for onopen() to be called before using websocket
-	 * @param	socket - accepted socket 
-	 * @param	alredyRecieved - data already read from socket, it should be no more then full http header
-	 * @param	debug - debug messages?
-	 */
-	public static function createFromAcceptedSocket(socket:Socket2, alredyRecieved:String = '', debug:Bool = true) {
+	public static function createFromAcceptedSocket(socket:Socket2, alreadyRecieved:String = '', debug:Bool) {
 		var websocket = new WebSocketGeneric();
 		websocket.socket = socket;
 		websocket.debug = debug;
 		websocket.commonInitialize();
 		websocket.state = State.ServerHandshake;
-		websocket.httpHeader = alredyRecieved;
+		websocket.httpHeader = alreadyRecieved;
 		return websocket;
 	}
 

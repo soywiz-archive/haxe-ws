@@ -38,6 +38,10 @@ class WebSocket {
 	
 	public function close() {
 	}
+	
+	public function isOpen():Bool {
+		return false;
+	}
 
     public dynamic function onopen():Void {
     }

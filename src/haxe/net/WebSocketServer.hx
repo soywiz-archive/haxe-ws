@@ -1,4 +1,5 @@
 package haxe.net;
+import haxe.io.Error;
 import haxe.net.impl.SocketSys;
 import haxe.net.impl.WebSocketGeneric;
 import sys.net.Host;
@@ -12,6 +13,7 @@ class WebSocketServer {
 	function new(host:String, port:Int, maxConnections:Int, isDebug:Bool) {
 		_isDebug = isDebug;
 		_listenSocket = new Socket();
+		_listenSocket.setBlocking(false);
 		_listenSocket.bind(new Host(host), port);
 		_listenSocket.listen(maxConnections);
 	}
@@ -20,12 +22,19 @@ class WebSocketServer {
 		return new WebSocketServer(host, port, maxConnections, isDebug);
 	}
 	
-	@:access(haxe.net.impl.WebSocketGeneric.createFromExistingSocket)
-	@:access(haxe.net.impl.SocketSys.createFromExistingSocket)
-	public function accept() {
-		var socket = _listenSocket.accept();
-		
-		return WebSocketGeneric.createFromAcceptedSocket(SocketSys.createFromExistingSocket(socket, _isDebug), '', _isDebug);
+	public function accept():WebSocket {
+		try {
+			var socket = _listenSocket.accept();
+			return WebSocketGeneric.createFromAcceptedSocket(Socket2.createFromExistingSocket(socket, _isDebug), '', _isDebug);
+		}
+		catch (e:Dynamic) {
+			if (e == 'Blocking' || e == Error.Blocked) {
+				return null;
+			}
+			else {
+				throw(e);
+			}
+		}
 	}
 	
 }

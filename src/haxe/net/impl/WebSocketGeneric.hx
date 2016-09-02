@@ -72,6 +72,7 @@ class WebSocketGeneric extends WebSocket {
 	
 	/**
 	 * create server websocket from socket returned by accept()
+	 * wait for onopen() to be called before using websocket
 	 * @param	socket - accepted socket 
 	 * @param	alredyRecieved - data already read from socket, it should be no more then full http header
 	 * @param	debug - debug messages?
@@ -339,12 +340,26 @@ class WebSocketGeneric extends WebSocket {
     private function sendFrame(data:Bytes, type:Opcode) {
         writeBytes(prepareFrame(data, type, true));
     }
+	
+	override public function isOpen():Bool {
+		return switch(state) {
+    		case Handshake: false;
+			case ServerHandshake: false;
+    		case Head: true;
+    		case HeadExtraLength: true;
+    		case HeadExtraMask: true;
+    		case Body: true;
+			case Closed: false;
+		}
+	}
 
     override public function sendString(message:String) {
+		if (!isOpen()) throw('websocket not open');
         sendFrame(Utf8Encoder.encode(message), Opcode.Text);
     }
 
     override public function sendBytes(message:Bytes) {
+		if (!isOpen()) throw('websocket not open');
         sendFrame(message, Opcode.Binary);
     }
 

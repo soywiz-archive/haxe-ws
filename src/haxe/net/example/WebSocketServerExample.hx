@@ -14,7 +14,10 @@ class WebSocketServerExample {
 			try{
 				trace('listening on port $port');
 			
-				var websocket = server.accept();
+				var websocket = null;
+				while (websocket == null) {
+					websocket = server.accept();
+				}
 				
 				websocket.onmessageString = function(message:String) {
 					trace('Recieved message: $message');
@@ -31,10 +34,15 @@ class WebSocketServerExample {
 					websocket = null;
 				}
 				
-				websocket.sendString('hello from server');
+				var wasMessageSent:Bool = false;
 				
 				var n = 0;
 				while (websocket != null) {
+					if (websocket.isOpen() && !wasMessageSent) {
+						websocket.sendString('hello from server');						
+						wasMessageSent = true;
+					}
+					
 					websocket.process();
 					Sys.sleep(0.5);
 				}

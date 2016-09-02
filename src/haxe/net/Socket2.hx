@@ -44,4 +44,10 @@ class Socket2 {
         #error "Unsupported platform"
         #end
     }
+	
+	#if sys
+	static public function createFromExistingSocket(socket:sys.net.Socket, debug:Bool = false) {
+		return haxe.net.impl.SocketSys.createFromExistingSocket(socket, debug);
+	}
+	#end
 }

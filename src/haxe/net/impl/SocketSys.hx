@@ -47,7 +47,7 @@ class SocketSys extends Socket2 {
 		return new SocketSys(host, port, debug).initialize(secure);
 	}
 	
-	static function createFromExistingSocket(socket:sys.net.Socket, debug:Bool) {
+	static function createFromExistingSocket(socket:sys.net.Socket, debug:Bool = false) {
 		var socketSys = new SocketSys(socket.host().host.host, socket.host().port, debug);
 		socket.setBlocking(false);
 		socketSys.impl = socket;
@@ -93,7 +93,7 @@ class SocketSys extends Socket2 {
 						out.writeBytes(data.sub(0, readed));
 					}
 				} catch (e:Dynamic) {
-					needClose = !(Std.is(e, Error) && (e:Error).match(Error.Blocked));
+					needClose = !(e == 'Blocking' || (Std.is(e, Error) && (e:Error).match(Error.Blocked)));
 					if(needClose && debug) trace('closing socket because of $e');
 				}
 				ondata(out.readAllAvailableBytes());

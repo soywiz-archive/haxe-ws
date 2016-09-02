@@ -137,14 +137,14 @@ class WebSocketGeneric extends WebSocket {
 					try {
 						var handshake = prepareServerHandshake();
 						_debug('Sending responce: $handshake');
-						socket.send(Bytes.ofString(handshake));
+						writeBytes(Bytes.ofString(handshake));
 						
 						this.onopen();
 						
 						state = State.Head;
 					}
 					catch (e:String) {
-						socket.send(Bytes.ofString(prepareHttp400(e)));
+						writeBytes(Bytes.ofString(prepareHttp400(e)));
 						_debug('Error in http request: $e');
 						socket.close();
 						state = State.Closed;

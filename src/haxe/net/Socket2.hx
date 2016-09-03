@@ -39,9 +39,15 @@ class Socket2 {
         #if flash
         return new haxe.net.impl.SocketFlash(host, port, secure, debug);
         #elseif sys
-        return new haxe.net.impl.SocketSys(host, port, secure, debug);
+        return haxe.net.impl.SocketSys.create(host, port, secure, debug);
         #else
         #error "Unsupported platform"
         #end
     }
+	
+	#if sys
+	static public function createFromExistingSocket(socket:sys.net.Socket, debug:Bool = false) {
+		return haxe.net.impl.SocketSys.createFromExistingSocket(socket, debug);
+	}
+	#end
 }

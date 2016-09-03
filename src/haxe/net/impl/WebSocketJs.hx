@@ -57,4 +57,8 @@ class WebSocketJs extends WebSocket {
 	override public function close() {
 		this.impl.close();
 	}
+	
+	override public function isOpen():Bool {
+		return this.impl.readyState == js.html.WebSocket.OPEN;
+	}
 }

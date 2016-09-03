@@ -1,5 +1,6 @@
 package haxe.net.impl;
 
+import haxe.Constraints.Function;
 import haxe.io.Bytes;
 import haxe.io.Error;
 import sys.net.Host;
@@ -11,9 +12,11 @@ class SocketSys extends Socket2 {
     private var sendError:Bool = false;
 	private var wasCloseSent:Bool = false;
     private var secure:Bool;
+	private var isClosed:Bool = false;
 
-    public function new(host:String, port:Int, secure:Bool, debug:Bool = false) {
-        super(host, port, debug);
+    private function new(host:String, port:Int, debug:Bool = false) super(host, port, debug);
+	
+	private function initialize(secure:Bool) {
         this.secure = secure;
         var impl:Dynamic = null;
         if (secure) {
@@ -36,11 +39,26 @@ class SocketSys extends Socket2 {
             this.sendError = true;
             if (debug) trace('socket.error! $e');
         }
+		
+		return this;
     }
+	
+	public static function create(host:String, port:Int, secure:Bool, debug:Bool = false) {
+		return new SocketSys(host, port, debug).initialize(secure);
+	}
+	
+	static function createFromExistingSocket(socket:sys.net.Socket, debug:Bool = false) {
+		var socketSys = new SocketSys(socket.host().host.host, socket.host().port, debug);
+		socket.setBlocking(false);
+		socketSys.impl = socket;
+		socketSys.secure = false;
+		return socketSys;
+	}
 
     override public function close() {
 		this.impl.close();
 		if (!wasCloseSent) {
+			
 			wasCloseSent = true;
 			if (debug) trace('socket.onclose!');
 			onclose();
@@ -75,12 +93,14 @@ class SocketSys extends Socket2 {
 						out.writeBytes(data.sub(0, readed));
 					}
 				} catch (e:Dynamic) {
-					needClose = !(Std.is(e, Error) && (e:Error).match(Error.Blocked));
+					needClose = !(e == 'Blocking' || (Std.is(e, Error) && (e:Error).match(Error.Blocked)));
+					if(needClose && debug) trace('closing socket because of $e');
 				}
 				ondata(out.readAllAvailableBytes());
 			}
 		}
 		catch (e:Dynamic) {
+			if(debug) trace('closing socket because of $e');
 			needClose = true;
 		}
 		

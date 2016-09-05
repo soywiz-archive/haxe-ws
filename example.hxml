@@ -9,6 +9,12 @@
 
 -neko output/out.n
 -cp src
--D hxssl=1
--lib hxssl:3.0.0-alpha
+#-D hxssl=1
+#-lib hxssl:3.0.0-alpha
+-main haxe.net.example.WebSocketExample
+
+--next
+
+-js output/out.js
+-cp src
 -main haxe.net.example.WebSocketExample

@@ -207,7 +207,7 @@ class WebSocketGeneric extends WebSocket {
 							setClosed();
 							socket.close();
                     }
-                    state = State.Head;
+					if(state != State.Closed) state = State.Head;
                 default:
                     return;
             }

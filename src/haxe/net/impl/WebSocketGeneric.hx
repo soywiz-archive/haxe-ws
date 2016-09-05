@@ -4,6 +4,7 @@ import haxe.crypto.Base64;
 import haxe.crypto.Sha1;
 import haxe.io.Bytes;
 import haxe.net.Socket2;
+import haxe.net.WebSocket.ReadyState;
 class WebSocketGeneric extends WebSocket {
     private var socket:Socket2;
     private var origin = "http://127.0.0.1/";
@@ -16,6 +17,7 @@ class WebSocketGeneric extends WebSocket {
     private var protocols = [];
     private var state = State.Handshake;
     public var debug:Bool = true;
+	private var needHandleData:Bool = false;
 
 	function initialize(uri:String, protocols:Array<String> = null, origin:String = null, key:String = "wskey", debug:Bool = true) {
         if (origin == null) origin = "http://127.0.0.1/";
@@ -77,11 +79,15 @@ class WebSocketGeneric extends WebSocket {
 		websocket.commonInitialize();
 		websocket.state = State.ServerHandshake;
 		websocket.httpHeader = alreadyRecieved;
+		websocket.needHandleData = true;
 		return websocket;
 	}
 
     override public function process() {
         socket.process();
+		if (needHandleData) {
+			handleData();
+		}
     }
 
     private function _debug(msg:String, ?p:PosInfos):Void {
@@ -111,6 +117,8 @@ class WebSocketGeneric extends WebSocket {
     private var payload:BytesRW = null;
 
     private function handleData() {
+		needHandleData = false;
+		
         while (true) {
             if (payload == null) payload = new BytesRW();
 
@@ -220,17 +228,13 @@ class WebSocketGeneric extends WebSocket {
         sendFrame(Bytes.alloc(0), Opcode.Ping);
     }
 	
+	private function isHttpHeaderRead():Bool return httpHeader.substr( -4) == "\r\n\r\n";
+	
 	private function readHttpHeader():Bool {
-		var found = false;
-		while (socketData.available > 0) {
+		while (!isHttpHeaderRead() && socketData.available > 0) {
 			httpHeader += String.fromCharCode(socketData.readByte());
-			//trace(httpHeader.substr( -4));
-			if (httpHeader.substr(-4) == "\r\n\r\n") {
-				found = true;
-				break;
-			}
 		}
-		return found;
+		return isHttpHeaderRead();
 	}
 	
 	private function prepareServerHandshake() {
@@ -330,25 +334,25 @@ class WebSocketGeneric extends WebSocket {
         writeBytes(prepareFrame(data, type, true));
     }
 	
-	override public function isOpen():Bool {
+	override function get_readyState():ReadyState {
 		return switch(state) {
-    		case Handshake: false;
-			case ServerHandshake: false;
-    		case Head: true;
-    		case HeadExtraLength: true;
-    		case HeadExtraMask: true;
-    		case Body: true;
-			case Closed: false;
+    		case Handshake: ReadyState.Connecting;
+			case ServerHandshake: ReadyState.Connecting;
+    		case Head: ReadyState.Open;
+    		case HeadExtraLength: ReadyState.Open;
+    		case HeadExtraMask: ReadyState.Open;
+    		case Body: ReadyState.Open;
+			case Closed: ReadyState.Closed;
 		}
 	}
 
     override public function sendString(message:String) {
-		if (!isOpen()) throw('websocket not open');
+		if (readyState != Open) throw('websocket not open');
         sendFrame(Utf8Encoder.encode(message), Opcode.Text);
     }
 
     override public function sendBytes(message:Bytes) {
-		if (!isOpen()) throw('websocket not open');
+		if (readyState != Open) throw('websocket not open');
         sendFrame(message, Opcode.Binary);
     }
 

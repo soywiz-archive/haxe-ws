@@ -119,10 +119,8 @@ class WebSocketGeneric extends WebSocket {
 					if (!readHttpHeader()) {
 						return;
 					}
-					
-                    this.onopen();
-
-                    state = State.Head;
+					state = State.Head;
+					this.onopen();
 				case State.ServerHandshake:
 					if (!readHttpHeader()) {
 						return;
@@ -132,10 +130,8 @@ class WebSocketGeneric extends WebSocket {
 						var handshake = prepareServerHandshake();
 						_debug('Sending responce: $handshake');
 						writeBytes(Bytes.ofString(handshake));
-						
-						this.onopen();
-						
 						state = State.Head;
+						this.onopen();
 					}
 					catch (e:String) {
 						writeBytes(Bytes.ofString(prepareHttp400(e)));

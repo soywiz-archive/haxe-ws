@@ -1,7 +1,9 @@
 /.idea
+/.vscode
 /*.iws
 /*.ipr
 /*.iml
 /output
 /target
 *.zip
+display-*.hxml

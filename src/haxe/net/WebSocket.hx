@@ -2,6 +2,14 @@ package haxe.net;
 
 // Available in all targets including javascript
 import haxe.io.Bytes;
+
+enum ReadyState {
+	Connecting;
+	Open;
+	Closing;
+	Closed;
+}
+
 class WebSocket {
     private function new() {
     }
@@ -52,9 +60,8 @@ class WebSocket {
 	public function close() {
 	}
 	
-	public function isOpen():Bool {
-		return false;
-	}
+	public var readyState(get, never):ReadyState;
+	function get_readyState():ReadyState throw 'Not implemented';
 
     public dynamic function onopen():Void {
     }

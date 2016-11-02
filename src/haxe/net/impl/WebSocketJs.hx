@@ -58,7 +58,13 @@ class WebSocketJs extends WebSocket {
 		this.impl.close();
 	}
 	
-	override public function isOpen():Bool {
-		return this.impl.readyState == js.html.WebSocket.OPEN;
+	override function get_readyState():ReadyState {
+		return switch(this.impl.readyState) {
+    		case js.html.WebSocket.OPEN: ReadyState.Open;
+			case js.html.WebSocket.CLOSED: ReadyState.Closed;
+			case js.html.WebSocket.CLOSING: ReadyState.Closing;
+			case js.html.WebSocket.CONNECTING: ReadyState.Connecting;
+			default: throw 'Unexpected websocket state';
+		}
 	}
 }

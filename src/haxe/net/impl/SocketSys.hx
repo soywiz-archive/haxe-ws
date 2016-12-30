@@ -79,9 +79,16 @@ class SocketSys extends Socket2 {
         }
 		
 		var needClose = false;
+		var result = null;
 		try {
-			var result = sys.net.Socket.select([this.impl], [this.impl], [this.impl], 0.4);
+			result = sys.net.Socket.select([this.impl], [this.impl], [this.impl], 0.4);
+		}
+		catch (e:Dynamic) {
+			if(debug) trace('closing socket because of $e');
+			needClose = true;
+		}
 
+		if(result != null && !needClose) {
 			if (result.read.length > 0) {
 				var out = new BytesRW();
 				try {
@@ -98,10 +105,6 @@ class SocketSys extends Socket2 {
 				}
 				ondata(out.readAllAvailableBytes());
 			}
-		}
-		catch (e:Dynamic) {
-			if(debug) trace('closing socket because of $e');
-			needClose = true;
 		}
 		
 		if (needClose) {

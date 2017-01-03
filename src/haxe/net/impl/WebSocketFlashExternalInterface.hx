@@ -1,6 +1,9 @@
 package haxe.net.impl;
+
 import haxe.io.Bytes;
 import flash.external.ExternalInterface;
+import haxe.extern.EitherType;
+
 class WebSocketFlashExternalInterface extends WebSocket {
     private var index:Int;
     static private var debug:Bool = false;
@@ -14,7 +17,7 @@ class WebSocketFlashExternalInterface extends WebSocket {
         this.index = ExternalInterface.call("function() {window.websocketjsList = window.websocketjsList || []; return window.websocketjsList.length; }");
         sockets[this.index] = this;
 
-        var success = ExternalInterface.call("function(uri, protocols, index, objectID) {
+        var result:EitherType<Bool,String> = ExternalInterface.call("function(uri, protocols, index, objectID) {
             try {
                 var flashObj = document.getElementById(objectID);
                 var ws = (protocols != null) ? new WebSocket(uri, protocols) : new WebSocket(uri);
@@ -34,6 +37,9 @@ class WebSocketFlashExternalInterface extends WebSocket {
                 return 'error:' + e;
             }
         }", url, protocols, this.index, ExternalInterface.objectID);
+        if(result != true) {
+            throw result;
+        }
     }
 
     static private var initializedOnce:Bool = false;

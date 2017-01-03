@@ -1,0 +1,5 @@
+language: haxe
+haxe:
+  - "3.2.1"
+hxml:
+  - tests.hxml

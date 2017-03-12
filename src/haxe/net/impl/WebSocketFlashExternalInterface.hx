@@ -1,8 +1,9 @@
 package haxe.net.impl;
 
-import haxe.io.Bytes;
 import flash.external.ExternalInterface;
 import haxe.extern.EitherType;
+import haxe.io.Bytes;
+import haxe.io.BytesData;
 
 class WebSocketFlashExternalInterface extends WebSocket {
     private var index:Int;
@@ -21,6 +22,7 @@ class WebSocketFlashExternalInterface extends WebSocket {
             try {
                 var flashObj = document.getElementById(objectID);
                 var ws = (protocols != null) ? new WebSocket(uri, protocols) : new WebSocket(uri);
+                ws.binaryType = 'arraybuffer';
                 if (window.websocketjsList[index]) {
                     try {
                         window.websocketjsList[index].close();
@@ -31,7 +33,12 @@ class WebSocketFlashExternalInterface extends WebSocket {
                 ws.onopen = function(e) { flashObj.websocketOpen(index); }
                 ws.onclose = function(e) { flashObj.websocketClose(index); }
                 ws.onerror = function(e) { flashObj.websocketError(index); }
-                ws.onmessage = function(e) { flashObj.websocketRecv(index, e.data); }
+                ws.onmessage = function(e) {
+                    if (typeof e.data == 'string')
+                        flashObj.websocketRecvString(index, e.data);
+                    else
+                        flashObj.websocketRecvBinary(index, Array.from(new Uint8Array(e.data)));
+                }
                 return true;
             } catch (e) {
                 return 'error:' + e;
@@ -65,25 +72,49 @@ class WebSocketFlashExternalInterface extends WebSocket {
                 sockets[index].onerror('error');
             });
         });
-        ExternalInterface.addCallback('websocketRecv', function(index:Int, data:Dynamic) {
-            if (debug) trace('js.websocketRecv[$index]: $data');
+        ExternalInterface.addCallback('websocketRecvString', function(index:Int, data:Dynamic) {
+            if (debug) trace('js.websocketRecvString[$index]: $data');
             WebSocket.defer(function() {
                 sockets[index].onmessageString(data);
+            });
+        });
+        ExternalInterface.addCallback('websocketRecvBinary', function(index:Int, data:Dynamic) {
+            if (debug) trace('js.websocketRecvBinary[$index]: $data');
+            WebSocket.defer(function() {
+                var bytes = new BytesData();
+                for (index in 0...data.length)
+                    bytes.writeByte(data[index]);
+                sockets[index].onmessageBytes(Bytes.ofData(bytes));
             });
         });
     }
 
     override public function sendBytes(message:Bytes) {
-        _send(message);
+        //_send(message.getData());
+        
+        var data = new Array<Int>();
+        for (index in 0...message.length)
+            data[index] = message.getInt32(index) & 0xFF;
+        
+        WebSocket.defer(function() {
+            var result:EitherType<Bool,String> = ExternalInterface.call("function(index, data) {
+                try {
+                    window.websocketjsList[index].send(new Uint8Array(data).buffer);
+                    return true;
+                } catch (e) {
+                    return 'error:' + e;
+                }
+            }", this.index, data);
+            
+            if(result != true) {
+                throw result;
+            }
+        });
     }
 
     override public function sendString(message:String) {
-        _send(message);
-    }
-
-    private function _send(message:Dynamic) {
         WebSocket.defer(function() {
-            var success = ExternalInterface.call("function(index, message) {
+            var result:EitherType<Bool,String> = ExternalInterface.call("function(index, message) {
                 try {
                     window.websocketjsList[index].send(message);
                     return true;
@@ -91,6 +122,10 @@ class WebSocketFlashExternalInterface extends WebSocket {
                     return 'error:' + e;
                 }
             }", this.index, message);
+            
+            if(result != true) {
+                throw result;
+            }
         });
     }
 

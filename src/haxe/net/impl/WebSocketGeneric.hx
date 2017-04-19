@@ -206,7 +206,9 @@ class WebSocketGeneric extends WebSocket {
                         case Opcode.Close:
                             _debug("Socket Closed");
 							setClosed();
-							socket.close();
+							try {
+								socket.close();
+							} catch(_:Dynamic) {}
                     }
 					if(state != State.Closed) state = State.Head;
                 default:

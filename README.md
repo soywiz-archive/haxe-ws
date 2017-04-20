@@ -2,7 +2,7 @@
 
 WebSockets everywhere! Including javascript, flash and sys targets.
 
-```
+```haxe
 class WebSocketExample {
     static public function main() {
         trace('testing!');

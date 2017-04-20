@@ -328,9 +328,11 @@ class WebSocketGeneric extends WebSocket {
     }
 
     override public function close() {
-        sendFrame(Bytes.alloc(0), Opcode.Close);
-        socket.close();
-        setClosed();
+		if(state != State.Closed) {
+			sendFrame(Bytes.alloc(0), Opcode.Close);
+			socket.close();
+			setClosed();
+		}
     }
 
     private function sendFrame(data:Bytes, type:Opcode) {

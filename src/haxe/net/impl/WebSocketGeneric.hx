@@ -391,6 +391,7 @@ class WebSocketGeneric extends WebSocket {
             out.writeShort(data.length);
         } else {
             out.writeByte(127 | sizeMask);
+            out.writeInt(0);
             out.writeInt(data.length);
         }
 

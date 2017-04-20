@@ -166,7 +166,9 @@ class WebSocketGeneric extends WebSocket {
                         if (socketData.available < 2) return;
                         length = socketData.readUnsignedShort();
                     } else if (partialLength == 127) {
-                        if (socketData.available < 4) return;
+                        if (socketData.available < 8) return;
+                        var tmp = socketData.readUnsignedInt();
+                        if(tmp != 0) throw 'message too long';
                         length = socketData.readUnsignedInt();
                     } else {
                         length = partialLength;

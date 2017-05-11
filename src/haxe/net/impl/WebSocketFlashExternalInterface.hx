@@ -1,5 +1,6 @@
 package haxe.net.impl;
 
+import haxe.crypto.Base64;
 import flash.external.ExternalInterface;
 import haxe.extern.EitherType;
 import haxe.io.Bytes;
@@ -91,11 +92,11 @@ class WebSocketFlashExternalInterface extends WebSocket {
 
     override public function sendBytes(message:Bytes) {
         //_send(message.getData());
-        
+
         var data = new Array<Int>();
         for (index in 0...message.length)
             data[index] = message.getInt32(index) & 0xFF;
-        
+
         WebSocket.defer(function() {
             var result:EitherType<Bool,String> = ExternalInterface.call("function(index, data) {
                 try {
@@ -105,7 +106,7 @@ class WebSocketFlashExternalInterface extends WebSocket {
                     return 'error:' + e;
                 }
             }", this.index, data);
-            
+
             if(result != true) {
                 throw result;
             }
@@ -113,16 +114,21 @@ class WebSocketFlashExternalInterface extends WebSocket {
     }
 
     override public function sendString(message:String) {
+        var decode = message.indexOf(String.fromCharCode(0)) >= 0;
+        if(decode) {
+            message = Base64.encode(Bytes.ofString(message));
+        }
         WebSocket.defer(function() {
-            var result:EitherType<Bool,String> = ExternalInterface.call("function(index, message) {
+            var result:EitherType<Bool,String> = ExternalInterface.call("function(index, message, decode) {
                 try {
+                    if(decode) message = atob(message);
                     window.websocketjsList[index].send(message);
                     return true;
                 } catch (e) {
                     return 'error:' + e;
                 }
-            }", this.index, message);
-            
+            }", this.index, message, decode);
+
             if(result != true) {
                 throw result;
             }

@@ -1,7 +1,7 @@
       {
   "name" : "haxe-ws",
   "description" : "WebSockets everywhere! Including javascript, flash and sys targets.",
-  "version" : "1.0.3",
+  "version" : "1.0.4",
   "releasenote": "View repository/changelog for details.",
   "url" : "https://github.com/soywiz/haxe-ws",
   "classPath" : "src",

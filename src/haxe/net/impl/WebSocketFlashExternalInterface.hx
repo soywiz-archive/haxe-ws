@@ -35,9 +35,11 @@ class WebSocketFlashExternalInterface extends WebSocket {
                 ws.onclose = function(e) { flashObj.websocketClose(index); }
                 ws.onerror = function(e) { flashObj.websocketError(index); }
                 ws.onmessage = function(e) {
-                    if (typeof e.data == 'string')
-                        flashObj.websocketRecvString(index, e.data);
-                    else
+                    if (typeof e.data == 'string') {
+                        var decode = e.data.indexOf(String.fromCharCode(0)) >= 0;
+                        var message = (decode ? btoa(e.data) : e.data);
+                        flashObj.websocketRecvString(index, message, decode);
+                    } else
                         flashObj.websocketRecvBinary(index, Array.from(new Uint8Array(e.data)));
                 }
                 return true;
@@ -73,8 +75,9 @@ class WebSocketFlashExternalInterface extends WebSocket {
                 sockets[index].onerror('error');
             });
         });
-        ExternalInterface.addCallback('websocketRecvString', function(index:Int, data:Dynamic) {
+        ExternalInterface.addCallback('websocketRecvString', function(index:Int, data:Dynamic, decode:Bool) {
             if (debug) trace('js.websocketRecvString[$index]: $data');
+            if (decode) data = Base64.decode(data);
             WebSocket.defer(function() {
                 sockets[index].onmessageString(data);
             });

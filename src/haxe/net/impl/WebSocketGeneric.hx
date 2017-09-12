@@ -183,7 +183,7 @@ class WebSocketGeneric extends WebSocket {
                 case State.Body:
                     if (socketData.available < length) return;
                     payload.writeBytes(socketData.readBytes(length));
-
+                    if(state != State.Closed) state = State.Head;
                     switch (opcode) {
                         case Opcode.Binary | Opcode.Text | Opcode.Continuation:
                             _debug("Received message, " + "Type: " + opcode);
@@ -212,7 +212,6 @@ class WebSocketGeneric extends WebSocket {
                                 socket.close();
                             } catch(_:Dynamic) {}
                     }
-                    if(state != State.Closed) state = State.Head;
                 default:
                     return;
             }

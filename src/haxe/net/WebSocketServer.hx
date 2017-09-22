@@ -25,7 +25,6 @@ class WebSocketServer {
         	cast(_listenSocket, sys.ssl.Socket).setCertificate( Certificate.loadFile(Reflect.field(isSecure, "Certificate")), Key.readPEM(sys.io.File.getContent(Reflect.field(isSecure, "Key")), false) );
 			cast(_listenSocket, sys.ssl.Socket).verifyCert = false;
 		}
-		trace("aaaa");
 		_listenSocket.bind(new Host(host), port);
 		_listenSocket.setBlocking(false);
 		_listenSocket.listen(maxConnections);

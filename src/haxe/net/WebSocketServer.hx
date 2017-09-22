@@ -15,17 +15,17 @@ class WebSocketServer {
 	#if neko
 	var keepalive:Dynamic;
 	#end
-	function new(host:String, port:Int, maxConnections:Int, isSecure:Dynamic = true, isDebug:Bool = false) {
+	function new(host:String, port:Int, maxConnections:Int, isSecure:Dynamic = null, isDebug:Bool = false) {
 		_isDebug = isDebug;
-		_isSecure = isSecure == true;
-		_listenSocket = isSecure ? new sys.ssl.Socket() : new sys.net.Socket() ;
+		_isSecure = isSecure != null;
+		_listenSocket = _isSecure ? new sys.ssl.Socket() : new sys.net.Socket() ;
 		
 		if(_isSecure){
-			cast(_listenSocket, sys.ssl.Socket).setCA( Certificate.loadFile("certificate/cert/root.crt") );
-        	cast(_listenSocket, sys.ssl.Socket).setCertificate( Certificate.loadFile("certificate/cert/localhost.crt"), Key.readPEM(sys.io.File.getContent("certificate/cert/localhost.key"), false) );
+			cast(_listenSocket, sys.ssl.Socket).setCA( Certificate.loadFile(Reflect.field(isSecure, "CA")) );
+        	cast(_listenSocket, sys.ssl.Socket).setCertificate( Certificate.loadFile(Reflect.field(isSecure, "Certificate")), Key.readPEM(sys.io.File.getContent(Reflect.field(isSecure, "Key")), false) );
 			cast(_listenSocket, sys.ssl.Socket).verifyCert = false;
 		}
-		
+		trace("aaaa");
 		_listenSocket.bind(new Host(host), port);
 		_listenSocket.setBlocking(false);
 		_listenSocket.listen(maxConnections);

@@ -183,7 +183,7 @@ class WebSocketGeneric extends WebSocket {
                 case State.Body:
                     if (socketData.available < length) return;
                     payload.writeBytes(socketData.readBytes(length));
-
+                    if(state != State.Closed) state = State.Head;
                     switch (opcode) {
                         case Opcode.Binary | Opcode.Text | Opcode.Continuation:
                             _debug("Received message, " + "Type: " + opcode);
@@ -212,7 +212,6 @@ class WebSocketGeneric extends WebSocket {
                                 socket.close();
                             } catch(_:Dynamic) {}
                     }
-                    if(state != State.Closed) state = State.Head;
                 default:
                     return;
             }
@@ -380,7 +379,9 @@ class WebSocketGeneric extends WebSocket {
 
     private function prepareFrame(data:Bytes, type:Opcode, isFinal:Bool):Bytes {
         var out = new BytesRW();
-        var isMasked = true; // All clientes messages must be masked: http://tools.ietf.org/html/rfc6455#section-5.1
+	
+        //Chrome: VM321:1 WebSocket connection to 'ws://localhost:8000/' failed: A server must not mask any frames that it sends to the client.
+        var isMasked = false; //true; // All clientes messages must be masked: http://tools.ietf.org/html/rfc6455#section-5.1
         var mask = generateMask();
         var sizeMask = (isMasked ? 0x80 : 0x00);
 

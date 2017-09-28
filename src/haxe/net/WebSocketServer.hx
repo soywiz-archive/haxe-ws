@@ -53,7 +53,8 @@ class WebSocketServer {
 						break;
 					}catch(e:Dynamic){ 
 						switch (Std.string(e)) {
-							case "Blocked": continue;
+							case "Blocking": continue;
+							case "Blocked": break;
 							case "SSL - No client certification received from the client, but required by the authentication mode": sslsocket.output.flush(); continue; //fix for chrome
 							case "X509 - Certificate verification failed, e.g. CRL, CA or signature check failed": break;
 							default:

@@ -108,7 +108,9 @@ class SocketSys extends Socket2 {
 		}
 		
 		if (needClose) {
-			close();
+            try{
+			    close();
+            }catch(e:Dynamic){};
 		}
     }
 

@@ -31,6 +31,8 @@ class WebSocketServer {
 		
 		#if neko
 		keepalive = neko.Lib.load("std", "socket_set_keepalive",4);
+		//disable keepalive:
+		keepalive( @:privateAccess _listenSocket.__s, false, null, null );
 		#end
 	}
 	
@@ -42,12 +44,12 @@ class WebSocketServer {
 		try {
 			var socket:Dynamic = null;
 			 if(_isSecure){
+				if(sys.net.Socket.select([_listenSocket], null, null, 0).read.length == 0)
+            		return null;
 				var sslsocket:sys.ssl.Socket = cast(_listenSocket, sys.ssl.Socket).accept();
 				while(true){
 					try{
-						#if neko
-							keepalive( @:privateAccess sslsocket.__s, true, 60, 5 );
-						#end
+						
 						sslsocket.waitForRead();
 						sslsocket.handshake();
 						break;

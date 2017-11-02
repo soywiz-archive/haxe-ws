@@ -44,34 +44,7 @@ class WebSocketServer {
 		try {
 			var socket:Dynamic = null;
 			 if(_isSecure){
-				if(sys.net.Socket.select([_listenSocket], null, null, 0).read.length == 0)
-            		return null;
-				var sslsocket:sys.ssl.Socket = cast(_listenSocket, sys.ssl.Socket).accept();
-				while(true){
-					try{
-						
-						sslsocket.waitForRead();
-						sslsocket.handshake();
-						break;
-					}catch(e:Dynamic){ 
-						switch (Std.string(e)) {
-							case "Blocking": continue;
-							case "Blocked": break;
-							case "SSL - No client certification received from the client, but required by the authentication mode": sslsocket.output.flush(); continue; //fix for chrome
-							case "X509 - Certificate verification failed, e.g. CRL, CA or signature check failed": break;
-							default:
-								if(_isDebug){
-									trace("Closing -> " + sslsocket.peer());
-									trace(Date.now() + " " + e);
-								}
-								sslsocket.close();
-								
-								break;
-						}
-					}
-				}
-				sslsocket.output.flush();
-				socket = sslsocket;
+				socket = cast(_listenSocket, sys.ssl.Socket).accept();
 			}else{
 				socket = _listenSocket.accept();
 			}

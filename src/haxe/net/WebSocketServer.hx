@@ -31,6 +31,8 @@ class WebSocketServer {
 		
 		#if neko
 		keepalive = neko.Lib.load("std", "socket_set_keepalive",4);
+		//disable keepalive:
+		keepalive( @:privateAccess _listenSocket.__s, false, null, null );
 		#end
 	}
 	
@@ -42,33 +44,7 @@ class WebSocketServer {
 		try {
 			var socket:Dynamic = null;
 			 if(_isSecure){
-				var sslsocket:sys.ssl.Socket = cast(_listenSocket, sys.ssl.Socket).accept();
-				while(true){
-					try{
-						#if neko
-							keepalive( @:privateAccess sslsocket.__s, true, 60, 5 );
-						#end
-						sslsocket.waitForRead();
-						sslsocket.handshake();
-						break;
-					}catch(e:Dynamic){ 
-						switch (Std.string(e)) {
-							case "Blocked": continue;
-							case "SSL - No client certification received from the client, but required by the authentication mode": sslsocket.output.flush(); continue; //fix for chrome
-							case "X509 - Certificate verification failed, e.g. CRL, CA or signature check failed": break;
-							default:
-								if(_isDebug){
-									trace("Closing -> " + sslsocket.peer());
-									trace(Date.now() + " " + e);
-								}
-								sslsocket.close();
-								
-								break;
-						}
-					}
-				}
-				sslsocket.output.flush();
-				socket = sslsocket;
+				socket = cast(_listenSocket, sys.ssl.Socket).accept();
 			}else{
 				socket = _listenSocket.accept();
 			}

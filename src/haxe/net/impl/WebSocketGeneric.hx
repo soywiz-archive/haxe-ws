@@ -239,7 +239,7 @@ class WebSocketGeneric extends WebSocket {
 
         var firstLine = requestLines.shift();
         var regexp = ~/^HTTP\/1.1 ([0-9]+) ?(.*)$/;
-        if (!regexp.match(firstLine)) throw 'First line of HTTP request is invalid: "$firstLine"';
+        if (!regexp.match(firstLine)) throw 'First line of HTTP response is invalid: "$firstLine"';
         var statusCode:String = regexp.matched(1);
         if (statusCode != "101") throw 'Status code differed from 101 indicates that handshake has not succeeded. Actual status code: ${statusCode}.';
     }

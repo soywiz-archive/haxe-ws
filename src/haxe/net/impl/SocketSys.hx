@@ -57,6 +57,7 @@ class SocketSys extends Socket2 {
 
     override public function close() {
 		this.impl.close();
+        isClosed = true;
 		if (!wasCloseSent) {
 			
 			wasCloseSent = true;
@@ -110,7 +111,7 @@ class SocketSys extends Socket2 {
 			}
 		}
 		
-		if (needClose) {
+		if (needClose && !isClosed) {
 			    close();
 		}
     }

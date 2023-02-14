@@ -6,6 +6,12 @@ import haxe.io.Error;
 import sys.net.Host;
 import sys.net.Socket;
 
+#if (haxe_ver >= 4.2)
+import Std.isOfType;
+#else
+import Std.is as isOfType;
+#end
+
 class SocketSys extends Socket2 {
     private var impl:sys.net.Socket;
     private var sendConnect:Bool = false;
@@ -100,7 +106,7 @@ class SocketSys extends Socket2 {
 						out.writeBytes(data.sub(0, readed));
 					}
 				} catch (e:Dynamic) {
-                    needClose = !(e == 'Blocking' || (Std.is(e, Error) && (
+                    needClose = !(e == 'Blocking' || (isOfType(e, Error) && (
                         (e:Error).match(Error.Custom(Error.Blocked)) ||
                         (e:Error).match(Error.Blocked))
                     ));

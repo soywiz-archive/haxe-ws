@@ -3,6 +3,13 @@ package haxe.net.impl;
 import haxe.io.Bytes;
 import haxe.net.WebSocket;
 
+#if (haxe_ver >= 4.2)
+import Std.isOfType;
+#else
+import Std.is as isOfType;
+#end
+
+
 class WebSocketJs extends WebSocket {
     private var impl:js.html.WebSocket;
 
@@ -25,13 +32,13 @@ class WebSocketJs extends WebSocket {
         };
         impl.onmessage = function(e:js.html.MessageEvent) {
             var m = e.data;
-            if (Std.is(m, String)) {
+            if (isOfType(m, String)) {
                 this.onmessageString(m);
-            } else if (Std.is(m, js.html.ArrayBuffer)) {
+            } else if (isOfType(m, js.html.ArrayBuffer)) {
                 //haxe.io.Int8Array
                 //js.html.ArrayBuffer
                 trace('Unhandled websocket onmessage ' + m);
-            } else if (Std.is(m, js.html.Blob)) {
+            } else if (isOfType(m, js.html.Blob)) {
 				var arrayBuffer : js.html.ArrayBuffer;
 				var fileReader = new js.html.FileReader();
 				fileReader.onload = function() {
